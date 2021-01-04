@@ -1,23 +1,26 @@
-FROM centos:centos7
+Bootstrap: yum
+OSVersion: 7
+MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
+Include: yum
 
-COPY docker/.singularity.d /.singularity.d
+%labels
+Modified from an original singularity file created by ShawnTBrown
+Version v0.1
 
-RUN yum -y groups mark convert && \
-    yum -y grouplist && \
-    yum -y groupinstall "Compatibility Libraries" \
-                        "Development Tools" \
-                        "Scientific Support"
+%post
+   echo "Installing Matlab Runtime 2014b"
+   yum install wget unzip libXext libXt-devel libXmu mesa-libGL -y
+   mkdir mcr-install
+   wget -P mcr-install -nv https://ssd.mathworks.com/supportfiles/downloads/R2014b/deployment_files/R2014b/installers/glnxa64/MCR_R2014b_glnxa64_installer.zip
+   cd mcr-install
+   unzip MCR_R2014b_glnxa64_installer.zip
+   ./install -mode silent -agreeToLicense yes
+   cd ..
+   rm -rf mcr-install
+   yum clean all
 
-RUN yum -y install libXt wget
-
-RUN yum clean all
-
-RUN wget https://ssd.mathworks.com/supportfiles/downloads/R2014b/deployment_files/R2014b/installers/glnxa64/MCR_R2014b_glnxa64_installer.zip && \
-    unzip MCR_R2014b_glnxa64_installer.zip -d MCR_R2014b_glnxa64_installer && \
-    cd MCR_R2014b_glnxa64_installer && \
-    ./install -mode silent -agreeToLicense yes -outputFile ./install.log && \
-    cd .. && \
-    rm MCR_R2014b_glnxa64_installer.zip && \
-    rm -rf MCR_R2014b_glnxa64_installer
-
-RUN mkdir /cvmfs
+%environment
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/MATLAB/MATLAB_Runtime/v84/runtime/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/v84/bin/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/os/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/java/jre/glnxa64/jre/lib/amd64/native_threads:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/java/jre/glnxa64/jre/lib/amd64/server:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/java/jre/glnxa64/jre/lib/amd64
+XAPPLRESDIR=/usr/local/MATLAB/MATLAB_Runtime/v84/X11/app-defaults
+MCR_CACHE_VERBOSE=true
+MCR_CACHE_ROOT=/tmp
