@@ -1,26 +1,38 @@
-Bootstrap: yum
-OSVersion: 7
-MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
-Include: yum
+Bootstrap: docker
+From: ubuntu:20.04
 
-%labels
-Modified from an original singularity file created by ShawnTBrown
-Version v0.1
+IncludeCmd: yes
+
+%runscript
+    exec /bin/bash "$@"
 
 %post
-   echo "Installing Matlab Runtime 2014b"
-   yum install wget unzip libXext libXt-devel libXmu mesa-libGL -y
-   mkdir mcr-install
-   wget -P mcr-install -nv https://ssd.mathworks.com/supportfiles/downloads/R2014b/deployment_files/R2014b/installers/glnxa64/MCR_R2014b_glnxa64_installer.zip
-   cd mcr-install
-   unzip MCR_R2014b_glnxa64_installer.zip
-   ./install -mode silent -agreeToLicense yes
-   cd ..
-   rm -rf mcr-install
-   yum clean all
+    echo "Install java & other stuff"
+    /usr/bin/apt-get --assume-yes install libxext-dev
+    /usr/bin/apt-get install -y software-properties-common
+    /usr/bin/add-apt-repository ppa:webupd8team/java
+    /usr/bin/apt-get update
+    /usr/bin/apt-get install -y 
 
-%environment
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/MATLAB/MATLAB_Runtime/v84/runtime/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/v84/bin/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/os/glnxa64:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/java/jre/glnxa64/jre/lib/amd64/native_threads:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/java/jre/glnxa64/jre/lib/amd64/server:/usr/local/MATLAB/MATLAB_Runtime/v84/sys/java/jre/glnxa64/jre/lib/amd64
-XAPPLRESDIR=/usr/local/MATLAB/MATLAB_Runtime/v84/X11/app-defaults
-MCR_CACHE_VERBOSE=true
-MCR_CACHE_ROOT=/tmp
+    /usr/bin/apt-get install -y openjdk-8-jdk build-essential git unzip xorg xserver-xorg wget tree pandoc curl vim
+	
+    echo "Download & install Matlab MCR 2014b"
+    mkdir /mcr-install && \
+    mkdir /opt/mcr
+    cd /mcr-install && \
+    wget -nc https://ssd.mathworks.com/supportfiles/downloads/R2014b/deployment_files/R2014b/installers/glnxa64/MCR_R2014b_glnxa64_installer.zip && \
+    cd /mcr-install && \
+    echo "Unzipping container" && \
+    unzip -q MCR_R2014b_glnxa64_installer.zip && \
+    ./install -destinationFolder /opt/mcr -agreeToLicense yes -mode silent && \
+    cd / && \
+    echo "Removing temporary files" && \
+    rm -rvf mcr-install
+
+    # mv -v /opt/mcr/v84/sys/os/glnxa64/libstdc++.so.6 /opt/mcr/v84/sys/os/glnxa64/libstdc++.so.6.old
+    echo 'export LD_LIBRARY_PATH=/opt/mcr/v84/runtime/glnxa64:/opt/mcr/v84/bin/glnxa64:/opt/mcr/v84/sys/os/glnxa64' >>$SINGULARITY_ENVIRONMENT
+    echo 'export XAPPLRESDIR=/opt/mcr/v84/X11/app-defaults' >>$SINGULARITY_ENVIRONMENT
+
+%labels
+Modified from an original singularity file created by Murphylab
+Version v0.1
